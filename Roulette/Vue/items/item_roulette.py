@@ -5,14 +5,18 @@
 
 from Vue.constantes import *
 from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+
 
 class ItemJeton(QGraphicsPixmapItem):
 
-    def __init__(self, table_roulette_scene, x, y, valeur=1):
+    def __init__(self, table_roulette_scene, x, y, liste_numeros_concernes, valeur=1):
         super().__init__()
         self.table_roulette_scene = table_roulette_scene
 
         self.position_jeton = (x, y)  # position théorique du jeton
+        self.valeur = valeur  # valeur du jeton
+        self.liste_numeros_concernes = liste_numeros_concernes
 
         self.taille_jeton = self.table_roulette_scene.table_roulette_view.taille_jeton
         self.jeton_bleu_1 = None
@@ -21,7 +25,6 @@ class ItemJeton(QGraphicsPixmapItem):
         self.jeton_vert_25 = None
         self.jeton_violet_50 = None
 
-        self.valeur = valeur  # valeur du jeton
         self.textItem = None  # texte du jeton
 
         self.set_couleur_jeton()
@@ -68,6 +71,9 @@ class ItemJeton(QGraphicsPixmapItem):
         rect.moveCenter(self.boundingRect().center())
         self.textItem.setPos(rect.topLeft())
         self.textItem.setActive(False)
+
+    def redessiner(self):
+        self.table_roulette_scene.addItem(self)
 
 
 class Helper(QObject):
@@ -245,7 +251,7 @@ class ItemCaseGain(QGraphicsPolygonItem):
         else:
             polygone = carre
 
-        brush = QBrush(VERT_CLAIR, Qt.SolidPattern)
+        brush = QBrush(GRIS_MAIN, Qt.SolidPattern)
         pen = QPen(OR, Qt.SolidLine)
         pen.setWidth(2)
         pen.setJoinStyle(Qt.MiterJoin)
@@ -263,12 +269,69 @@ class ItemCaseGain(QGraphicsPolygonItem):
                 taille_font = 7
 
             self.textItem = QGraphicsSimpleTextItem(str(self.valeur_gain), self)
-            self.textItem.setOpacity(1)
+            #self.textItem.setOpacity(1)
             self.textItem.setFont(QFont('Roboto', taille_font, QFont.Bold))
-            self.textItem.setBrush(QBrush(GRIS, Qt.SolidPattern))
+            self.textItem.setBrush(QBrush(OR, Qt.SolidPattern))
             rect = self.textItem.boundingRect()
             rect.moveCenter(self.boundingRect().center())
             self.textItem.setPos(rect.topLeft())
             self.textItem.setEnabled(False)
 
         self.setOpacity(0.9)
+
+
+class ItemRoue(QGraphicsItemGroup):
+
+    def __init__(self, table_roulette_view):
+        super(ItemRoue, self).__init__()
+        self.table_roulette_view = table_roulette_view
+        self.modele = self.table_roulette_view.widget_central_table_roulette.main_window.modele
+
+        self.dic_item_case_roue = {}  # stock les items case roue
+
+        angle = 0
+
+        pen = QPen(CREME_CLAIR, Qt.SolidLine)
+        pen.setWidth(2)
+        pen.setJoinStyle(Qt.MiterJoin)
+
+        for numero in self.table_roulette_view.widget_central_table_roulette.main_window.modele.roue:
+
+            brush = QBrush(VERT, Qt.SolidPattern)
+            match self.modele.jeu[numero][0]:
+                case "red":
+                    brush = QBrush(ROUGE, Qt.SolidPattern)
+                case "black":
+                    brush = QBrush(NOIR, Qt.SolidPattern)
+
+            case_roue = QGraphicsEllipseItem(1060, 230, 300, 300)
+            case_roue.setStartAngle(angle)
+            case_roue.setSpanAngle(156)  # 2pi = 360*16 -> (360*16/37)
+            case_roue.setBrush(brush)
+            case_roue.setPen(pen)
+
+            textItem = QGraphicsSimpleTextItem(str(numero))
+            textItem.setParentItem(case_roue)
+            textItem.setRotation(angle)
+            textItem.setFont(QFont('Roboto', 6, QFont.Bold))
+            textItem.setBrush(QBrush(CREME, Qt.SolidPattern))
+            center = case_roue.boundingRect().center()
+            textItem.setPos(center.x(), center.y())
+
+            self.addToGroup(textItem)
+
+
+            self.dic_item_case_roue[numero] = case_roue
+            self.addToGroup(self.dic_item_case_roue[numero])
+            angle += 156
+
+        cache_roue = QGraphicsEllipseItem(1110, 280, 200, 200)
+        cache_roue.setStartAngle(0)
+        cache_roue.setSpanAngle(360 * 16)
+        cache_roue.setBrush(QBrush(GRIS_MAIN, Qt.SolidPattern))
+        pen_cache_roue = QPen(CREME_CLAIR, Qt.SolidLine)
+        pen_cache_roue.setWidth(3)
+        pen_cache_roue.setJoinStyle(Qt.MiterJoin)
+        cache_roue.setPen(pen_cache_roue)
+        #self.addToGroup(cache_roue)
+

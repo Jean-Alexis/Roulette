@@ -7,7 +7,7 @@ from random import SystemRandom
 import matplotlib.pyplot as plt
 
 
-def lancer_roulette(nombre_de_tours):
+def lancer_roulette():
     cryptogen = SystemRandom()
     return cryptogen.randrange(0, 36)
 

@@ -2,6 +2,7 @@ import sys
 import ctypes
 import traceback
 import logging
+import faulthandler
 
 from PyQt5.QtWidgets import *
 from Vue.main_vue import MainWindow
@@ -46,5 +47,7 @@ class App(QApplication):
 
 
 if __name__ == '__main__':
+    faulthandler.enable()
     app = App(sys.argv)
+    app.processEvents()
     sys.exit(app.exec())

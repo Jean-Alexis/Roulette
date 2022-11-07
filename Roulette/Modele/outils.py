@@ -8,12 +8,26 @@ from time import perf_counter_ns
 
 
 def prRed(skk): print("\033[91m {}\033[00m".format(skk))
+
+
 def prGreen(skk): print("\033[92m {}\033[00m".format(skk))
+
+
 def prYellow(skk): print("\033[93m {}\033[00m".format(skk))
+
+
 def prLightPurple(skk): print("\033[94m {}\033[00m".format(skk))
+
+
 def prPurple(skk): print("\033[95m {}\033[00m".format(skk))
+
+
 def prCyan(skk): print("\033[96m {}\033[00m".format(skk))
+
+
 def prLightGray(skk): print("\033[97m {}\033[00m".format(skk))
+
+
 def prBlack(skk): print("\033[98m {}\033[00m".format(skk))
 
 
@@ -24,7 +38,7 @@ class Timer:
 
     def calculer_temps_execution(self):
         self.t1_stop = perf_counter_ns() - self.t1_start
-        prLightPurple(f"Temps écoulé : {self.t1_stop/10**6}")
+        #prLightPurple(f"Temps écoulé : {self.t1_stop / 10 ** 6}")
 
 
 def print_dic(dico):
@@ -39,3 +53,7 @@ def trouver_image_ressources(nom_image: str):
 def hash_liste_numeros_concernes(liste_numeros_concernes):
     """Retourne un identifiant unique de la liste des numéros concernés par une mise d'un jeton"""
     return hash(tuple(liste_numeros_concernes))
+
+
+def python_map(x, in_min, in_max, out_min, out_max):
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min

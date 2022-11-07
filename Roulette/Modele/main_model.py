@@ -2,12 +2,11 @@
 # -*- coding: utf-8 -*-
 # Author : Jean-Alexis HERMEL
 # Date : 29/10/2020
+
 from collections import OrderedDict
 from Modele.outils import *
 from collections import deque
-from itertools import islice
 from Modele.generateur_alea import lancer_roulette
-
 
 
 class MainModele:
@@ -63,6 +62,8 @@ class MainModele:
             "2nd": ["green"],
             "3rd": ["green"],
         })
+        self.roue = ['0', '32', '15', '19', '4', '21', '2', '25', '17', '34', '6', '27', '13', '36', '11', '30', '8', '23', '10', '5', '24',
+                     '16', '33', '1', '20', '14', '31', '9', '22', '18', '29', '7', '28', '12', '35', '3', '26']
         self.equivalent_group_case = {
             str(['1st']): ['3', '6', '9', '12', '15', '18', '21', '24', '27', '30', '33', '36'],
             str(['2nd']): ['2', '5', '8', '11', '14', '17', '20', '23', '26', '29', '32', '35'],
@@ -78,22 +79,16 @@ class MainModele:
                                         '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'],
             str(['2nd 12', '3rd 12']): ['13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24',
                                         '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36'],
-            str(['1 to 18']): ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16',
-                               '17', '18'],
-            str(['19 to 36']): ['19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32',
-                                '33', '34', '35', '36'],
-            str(['PAIR']): ['2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32',
-                            '34', '36'],
-            str(['IMPAIR']): ['1', '3', '5', '7', '9', '11', '13', '15', '17', '19', '21', '23', '25', '27', '29', '31',
-                              '33', '35'],
-            str(['ROUGE']): ['1', '3', '5', '7', '9', '12', '14', '16', '18', '19', '21', '23', '25', '27', '30', '32',
-                             '34', '36'],
-            str(['NOIR']): ['2', '4', '6', '8', '10', '11', '13', '15', '17', '20', '22', '24', '26', '28', '29', '31',
-                            '33', '35']
+            str(['1 to 18']): ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18'],
+            str(['19 to 36']): ['19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36'],
+            str(['PAIR']): ['2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32', '34', '36'],
+            str(['IMPAIR']): ['1', '3', '5', '7', '9', '11', '13', '15', '17', '19', '21', '23', '25', '27', '29', '31', '33', '35'],
+            str(['ROUGE']): ['1', '3', '5', '7', '9', '12', '14', '16', '18', '19', '21', '23', '25', '27', '30', '32', '34', '36'],
+            str(['NOIR']): ['2', '4', '6', '8', '10', '11', '13', '15', '17', '20', '22', '24', '26', '28', '29', '31', '33', '35']
         }
-        self.dic_des_mises = {}  # regroupe les mises effectuées ['case_misee(s)'] = mise_actuelle
-        self.banque = 100        # Somme restante pour effectuer des mises
-        self.queue_resultats_tirages = deque(maxlen=100)
+        self.dic_des_mises = {}    # regroupe les mises effectuées ['case_misee(s)'] = mise_actuelle
+        self.banque = 1000        # Somme restante pour effectuer des mises
+        self.queue_resultats_tirages = deque(maxlen=500)
 
     def transformer_dic_des_mises(self):
         """Remplace les cases misées qui ne sont pas des numéros par les cases numéros qu'ils représentent"""
@@ -179,15 +174,24 @@ class MainModele:
         mise_totale = self.calculer_mise_totale()
         return (self.banque - mise_totale - mise_case) < 0
 
-    def lancer_tirage(self, nombre_tirage: int):
-        tirage = lancer_roulette(nombre_tirage)
+    def lancer_tirage(self):
+        tirage = lancer_roulette()
         self.queue_resultats_tirages.appendleft(tirage)
 
     def mettre_banque_a_jour(self):
         numero_sorti = self.queue_resultats_tirages[0]
         mise_totale = self.calculer_mise_totale()
         gain_total = self.calculer_gain_par_case()[str(numero_sorti)]
-        self.banque += (gain_total - mise_totale)
+        gain_reel = gain_total - mise_totale
+        self.banque += gain_reel
+        return gain_reel, mise_totale
+
+    def lancer_tirage_simulation(self):
+        tirage = lancer_roulette()
+        mise_totale = self.calculer_mise_totale()
+        gain_total = self.calculer_gain_par_case()[str(tirage)]
+        gain_reel = gain_total - mise_totale
+        return mise_totale, tirage, gain_reel
 
 
 

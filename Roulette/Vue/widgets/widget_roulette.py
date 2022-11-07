@@ -7,7 +7,9 @@ from Vue.items.item_roulette import *
 from Vue.widgets.widget_bouttons import *
 from Vue.widgets.widget_label import *
 from Vue.constantes import *
-from Vue.items.item_roulette import Helper
+from collections import deque
+from copy import copy
+from PyQt5.QtGui import *
 
 
 class WidgetHistoriqueTirages(QWidget):
@@ -60,6 +62,10 @@ class WidgetHistoriqueTirages(QWidget):
 
         self.nombre_case_a_afficher = 25
         self.valeur_decalage_droite_simple = 0
+
+        for i in range(0, 500):
+            self.widget_central_table_roulette.main_window.modele.lancer_tirage()
+        self.actualiser_historique()
 
     def afficher_cases(self, nombre):
         case = QLabel(str(nombre))
@@ -168,41 +174,42 @@ class WidgetSelectionJeton(QWidget):
 
 class WidgetCentralTableRoulette(QWidget):
 
-    def __init__(self, main_window):
-        super(QWidget, self).__init__(main_window)
-        self.main_window = main_window
+    def __init__(self, table_widget):
+        super(QWidget, self).__init__(table_widget)
+        self.main_window = table_widget.main_window
 
-        self.setFixedHeight(575)
+        #self.setFixedHeight(700)
         self.installEventFilter(self)
         self.grid_layout = QGridLayout(self)
         self.grid_layout.setContentsMargins(0, 40, 0, 0)
         self.grid_layout.setVerticalSpacing(0)
         self.grid_layout.setHorizontalSpacing(2)
-        self.grid_layout.setAlignment(Qt.AlignBottom | Qt.AlignLeft)
+        self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
         self.widget_table_roulette = TableRouletteView(self)
         self.widget_bouton_effacer_jetons = WidgetBoutonEffacerJetons(self)
         self.widget_selection_jeton = WidgetSelectionJeton(self)
         self.widget_bouton_montrer_gains_cases = WidgetBoutonMontrerGainsCases(self)
+        self.widget_boutons_historique_jetons = WidgetBoutonsHistoriqueJetons(self)
         self.widget_label_banque_mise = WidgetLabelBanqueMise(self)
-        self.widget_bouton_tourner = WidgetBoutonTourner(self)
         self.widget_historique_tirage = WidgetHistoriqueTirages(self)
 
-        self.grid_layout.addWidget(self.widget_bouton_effacer_jetons, 2, 1, 2, 1, alignment=(Qt.AlignBottom | Qt.AlignLeft))
-        self.grid_layout.addWidget(self.widget_selection_jeton, 2, 2, 2, 2,alignment=(Qt.AlignBottom | Qt.AlignLeft))
-        self.grid_layout.addWidget(self.widget_bouton_montrer_gains_cases, 2, 4, 2, 1, alignment=(Qt.AlignBottom | Qt.AlignLeft))
-        self.grid_layout.addWidget(self.widget_label_banque_mise, 2, 6, 2, 1, alignment=(Qt.AlignBottom | Qt.AlignLeft))
-        self.grid_layout.addWidget(self.widget_table_roulette, 4, 1, 10, 10, alignment=(Qt.AlignBottom | Qt.AlignHCenter))
-        self.grid_layout.addWidget(self.widget_bouton_tourner, 14, 1, 2, 10, alignment=(Qt.AlignBottom | Qt.AlignHCenter))
+        self.grid_layout.addWidget(self.widget_bouton_effacer_jetons, 2, 1, 2, 2, alignment=(Qt.AlignTop | Qt.AlignLeft))
+        self.grid_layout.addWidget(self.widget_selection_jeton, 2, 3, 2, 2,alignment=(Qt.AlignTop | Qt.AlignLeft))
+        self.grid_layout.addWidget(self.widget_bouton_montrer_gains_cases, 2, 5, 2, 1, alignment=(Qt.AlignTop | Qt.AlignLeft))
+        self.grid_layout.addWidget(self.widget_boutons_historique_jetons, 2, 7, 1, 1, alignment=(Qt.AlignTop | Qt.AlignLeft))
+        self.grid_layout.addWidget(self.widget_label_banque_mise, 2, 8, 2, 1, alignment=(Qt.AlignTop | Qt.AlignLeft))
+        self.grid_layout.addWidget(self.widget_table_roulette, 4, 1, 10, 21, alignment=(Qt.AlignTop | Qt.AlignHCenter))
 
         self.v_layout = QVBoxLayout(self)
         self.v_layout.setSpacing(0)
         self.v_layout.setStretch(1, 1)
 
         self.v_layout.addLayout(self.grid_layout)
-        self.v_layout.addWidget(self.widget_historique_tirage, alignment=(Qt.AlignBottom | Qt.AlignHCenter))
+        self.v_layout.addWidget(self.widget_historique_tirage, alignment=(Qt.AlignTop | Qt.AlignHCenter))
 
-        self.v_layout.setAlignment(Qt.AlignBottom | Qt.AlignHCenter)
+        self.v_layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        self.v_layout.setContentsMargins(100, 100, 100, 100)
 
         self.setLayout(self.v_layout)
 
@@ -216,14 +223,17 @@ class WidgetCentralTableRoulette(QWidget):
 class TableRouletteScene(QGraphicsScene):
     def __init__(self, table_roulette_view):
         super().__init__(table_roulette_view)
-        self.setSceneRect(-10, -10, 1140, 420)
+        self.setSceneRect(-10, -10, 1380, 545)
         self.table_roulette_view = table_roulette_view
         self.modele = self.table_roulette_view.widget_central_table_roulette.main_window.modele
         self.installEventFilter(self)
 
-        self.dic_jeton = {}
-        self.valeur_ajout_jeton = 1
+        self.dic_jeton = {}  # contient l'état actuel des mises de jetons sur la table
+        self.nombre_historique_dic_jeton = 0  # nombre actuel de positions sauvegardées (10 max)
+        self.historique_dic_jeton = deque(maxlen=100)  # sauvegarde de l'historique des mises effectuées et tirées
+        self.curseur_historique_dic_jeton = 0  # curseur permettant de naviguer dans l'historique de dic jetons
 
+        self.valeur_ajout_jeton = 1  # valeur par defaut, change selon mise selectionnee
         self.animation_clignottement_en_cours = False
 
     def eventFilter(self, source, event):
@@ -235,17 +245,20 @@ class TableRouletteScene(QGraphicsScene):
             return False  # propage event aux items au-dessus
 
         elif event.type() == QEvent.GraphicsSceneMousePress:
+            if (not self.animation_clignottement_en_cours) and (not self.table_roulette_view.animation_label_gain_en_cours):
 
-            if qApp.mouseButtons() == Qt.RightButton:
-                self.mousePressEvent_right(event)
-                self.mise_a_jour_label_banque_mise()
-                return False  # propage event aux items au dessus
+                if qApp.mouseButtons() == Qt.RightButton:
+                    self.mousePressEvent_right(event)
+                    self.mise_a_jour_label_banque_mise()
+                    return False  # propage event aux items au dessus
 
-            elif qApp.mouseButtons() == Qt.LeftButton:
-                self.mousePressEvent_left(event)
-                self.mise_a_jour_label_banque_mise()
-                return False  # propage event aux items au dessus
+                elif qApp.mouseButtons() == Qt.LeftButton:
+                    self.mousePressEvent_left(event)
+                    self.mise_a_jour_label_banque_mise()
+                    return False  # propage event aux items au dessus
 
+                else:
+                    return False
             else:
                 return False
 
@@ -256,58 +269,36 @@ class TableRouletteScene(QGraphicsScene):
         else:
             return False
 
+    def ajouter_pattern_historique_mise(self):
+        """Sauvegarde la mise des jetons actuelle dans la queue d'historique"""
+        self.historique_dic_jeton.appendleft(copy(self.dic_jeton))
+
+    def placer_jetons_du_dic_jetons(self):
+        print_dic(self.dic_jeton)
+        for pos, jeton in self.dic_jeton.items():
+            jeton.redessiner()
+
+            # écrit ou réécrit la valeur de la mise pour un groupe de cases
+            self.modele.dic_des_mises[hash_liste_numeros_concernes(jeton.liste_numeros_concernes)] = {
+                "mise": jeton.valeur,
+                "cases": jeton.liste_numeros_concernes
+            }
+            self.modele.transformer_dic_des_mises()  # change les cases non-numéro en liste de numéros
+            for key, value in self.modele.dic_des_mises.items():
+                prGreen(f"{key}: mise: {value['mise']}    {value['cases']}")
+
+        self.mise_a_jour_label_banque_mise()
+
     def mousePressEvent_left(self, event):
-        if not self.animation_clignottement_en_cours:
-            x = int(event.scenePos().x())
-            y = int(event.scenePos().y())
-            liste_numeros = self.trouver_cases(x, y)
-            liste_numeros_concernes = self.filtrer_liste_items_concernes(sorted(liste_numeros))
-            #print(x, y, "Pos scene")
+        x = int(event.scenePos().x())
+        y = int(event.scenePos().y())
+        liste_numeros = self.trouver_cases(x, y)
+        liste_numeros_concernes = self.filtrer_liste_items_concernes(sorted(liste_numeros))
+        liste_numeros_concernes = self.filtrer_liste_numeros_concernes(liste_numeros_concernes)
 
-            if not self.modele.is_mise_avec_banque_positive(self.valeur_ajout_jeton):
-                if len(liste_numeros_concernes) != 0:  # si on n'est pas dans un cas où on ne peut pas poser de jeton
-                    x_jeton, y_jeton = self.trouver_position_jeton(liste_numeros_concernes)
+        #print(x, y, "Pos scene")
 
-                    # on cherche s'il y a deja un jeton à cet endroit dans le dictionnaire de position de jeton
-                    jeton_existant = False
-                    for position_jeton in self.dic_jeton.keys():
-                        if position_jeton == str((x_jeton, y_jeton)):
-                            jeton_existant = True
-
-                    if not jeton_existant:
-                        jeton = ItemJeton(self, x_jeton, y_jeton, self.valeur_ajout_jeton)
-                        self.dic_jeton[str(jeton.position_jeton)] = jeton
-                        nouvelle_valeur_jeton = jeton.valeur
-                    else:
-                        jeton_trouve = self.dic_jeton[str((x_jeton, y_jeton))]
-                        valeur_jeton = jeton_trouve.valeur
-                        self.removeItem(jeton_trouve)
-                        del self.dic_jeton[str((x_jeton, y_jeton))]
-
-                        nouvelle_valeur_jeton = valeur_jeton + self.valeur_ajout_jeton
-                        jeton = ItemJeton(self, x_jeton, y_jeton, nouvelle_valeur_jeton)
-                        self.dic_jeton[str(jeton.position_jeton)] = jeton
-
-                    # écrit ou réécrit la valeur la mise pour un groupe de cases
-                    self.modele.dic_des_mises[hash_liste_numeros_concernes(liste_numeros_concernes)] = {
-                        "mise": nouvelle_valeur_jeton,
-                        "cases": liste_numeros_concernes
-                    }
-                    self.modele.transformer_dic_des_mises()  # change les cases non-numéro en liste de numéros
-                    for key, value in self.modele.dic_des_mises.items():
-                        prGreen(f"{key}: mise: {value['mise']}    {value['cases']}")
-
-            else:
-                QMessageBox.critical(self.table_roulette_view.widget_central_table_roulette,'Erreur',
-                                     f"Mise de {self.valeur_ajout_jeton} supérieure au solde de la banque (={self.modele.banque})")
-
-    def mousePressEvent_right(self, event):
-        if not self.animation_clignottement_en_cours:
-            x = int(event.scenePos().x())
-            y = int(event.scenePos().y())
-            liste_numeros = self.trouver_cases(x, y)
-            liste_numeros_concernes = self.filtrer_liste_items_concernes(sorted(liste_numeros))
-
+        if not self.modele.is_mise_avec_banque_positive(self.valeur_ajout_jeton):
             if len(liste_numeros_concernes) != 0:  # si on n'est pas dans un cas où on ne peut pas poser de jeton
                 x_jeton, y_jeton = self.trouver_position_jeton(liste_numeros_concernes)
 
@@ -317,18 +308,61 @@ class TableRouletteScene(QGraphicsScene):
                     if position_jeton == str((x_jeton, y_jeton)):
                         jeton_existant = True
 
-                if jeton_existant:
+                if not jeton_existant:
+                    jeton = ItemJeton(self, x_jeton, y_jeton, liste_numeros_concernes, self.valeur_ajout_jeton)
+                    self.dic_jeton[str(jeton.position_jeton)] = jeton
+                    nouvelle_valeur_jeton = jeton.valeur
+                else:
                     jeton_trouve = self.dic_jeton[str((x_jeton, y_jeton))]
-                    self.removeItem(jeton_trouve)                 # efface le jeton graphiquement
-                    del self.dic_jeton[str((x_jeton, y_jeton))]   # efface le jeton de son dic gestionnaire
-                    del self.modele.dic_des_mises[hash_liste_numeros_concernes(liste_numeros_concernes)]  # efface la mise du modele
+                    valeur_jeton = jeton_trouve.valeur
+                    self.removeItem(jeton_trouve)
+                    del self.dic_jeton[str((x_jeton, y_jeton))]
+
+                    nouvelle_valeur_jeton = valeur_jeton + self.valeur_ajout_jeton
+                    jeton = ItemJeton(self, x_jeton, y_jeton, liste_numeros_concernes, nouvelle_valeur_jeton)
+                    self.dic_jeton[str(jeton.position_jeton)] = jeton
+
+                # écrit ou réécrit la valeur de la mise pour un groupe de cases
+                self.modele.dic_des_mises[hash_liste_numeros_concernes(liste_numeros_concernes)] = {
+                    "mise": nouvelle_valeur_jeton,
+                    "cases": liste_numeros_concernes
+                }
+                self.modele.transformer_dic_des_mises()  # change les cases non-numéro en liste de numéros
+                for key, value in self.modele.dic_des_mises.items():
+                    prGreen(f"{key}: mise: {value['mise']}    {value['cases']}")
+
+        else:
+            QMessageBox.critical(self.table_roulette_view.widget_central_table_roulette,'Erreur',
+                                 f"Mise de {self.valeur_ajout_jeton} supérieure au solde de la banque (={self.modele.banque})")
+
+    def mousePressEvent_right(self, event):
+        x = int(event.scenePos().x())
+        y = int(event.scenePos().y())
+        liste_numeros = self.trouver_cases(x, y)
+        liste_numeros_concernes = self.filtrer_liste_items_concernes(sorted(liste_numeros))
+        liste_numeros_concernes = self.filtrer_liste_numeros_concernes(liste_numeros_concernes)
+
+        if len(liste_numeros_concernes) != 0:  # si on n'est pas dans un cas où on ne peut pas poser de jeton
+            x_jeton, y_jeton = self.trouver_position_jeton(liste_numeros_concernes)
+
+            # on cherche s'il y a deja un jeton à cet endroit dans le dictionnaire de position de jeton
+            jeton_existant = False
+            for position_jeton in self.dic_jeton.keys():
+                if position_jeton == str((x_jeton, y_jeton)):
+                    jeton_existant = True
+
+            if jeton_existant:
+                jeton_trouve = self.dic_jeton[str((x_jeton, y_jeton))]
+                self.removeItem(jeton_trouve)                 # efface le jeton graphiquement
+                del self.dic_jeton[str((x_jeton, y_jeton))]   # efface le jeton de son dic gestionnaire
+                del self.modele.dic_des_mises[hash_liste_numeros_concernes(liste_numeros_concernes)]  # efface la mise du modele
 
     def mouseMoveEvent_(self, event):
         if not self.animation_clignottement_en_cours:
             x = int(event.scenePos().x())
             y = int(event.scenePos().y())
-            liste_numero = self.trouver_cases(x, y)
-            liste_numeros_concernes = self.filtrer_liste_items_concernes(sorted(liste_numero))
+            liste_numeros = self.trouver_cases(x, y)
+            liste_numeros_concernes = self.filtrer_liste_items_concernes(sorted(liste_numeros))
 
             for numero_a_surligner in liste_numeros_concernes:
                 for item in self.items():
@@ -364,12 +398,52 @@ class TableRouletteScene(QGraphicsScene):
         self.table_roulette_view.widget_central_table_roulette.widget_label_banque_mise.update_label_banque()
         self.table_roulette_view.widget_central_table_roulette.widget_label_banque_mise.update_label_mise()
 
+    def filtrer_liste_numeros_concernes(self, liste_numeros_concernes):
+        """supprime les digits lorsque les mises sont des chances multiples"""
+        if '1st 12' in liste_numeros_concernes and '2nd 12' in liste_numeros_concernes:
+            liste_numeros_concernes = ['1st 12', '2nd 12']
+        elif '2nd 12' in liste_numeros_concernes and '3rd 12' in liste_numeros_concernes:
+            liste_numeros_concernes = ['2nd 12', '3rd 12']
+        elif '1st' in liste_numeros_concernes and '2nd' in liste_numeros_concernes:
+            liste_numeros_concernes = ['1st', '2nd']
+        elif '2nd' in liste_numeros_concernes and '3rd' in liste_numeros_concernes:
+            liste_numeros_concernes = ['2nd', '3rd']
+
+        elif '1st 12' in liste_numeros_concernes:
+            liste_numeros_concernes = ['1st 12']
+        elif '2nd 12' in liste_numeros_concernes:
+            liste_numeros_concernes = ['2nd 12']
+        elif '3rd 12' in liste_numeros_concernes:
+            liste_numeros_concernes = ['3rd 12']
+        elif '1st' in liste_numeros_concernes:
+            liste_numeros_concernes = ['1st']
+        elif '2nd' in liste_numeros_concernes:
+            liste_numeros_concernes = ['2nd']
+        elif '3rd' in liste_numeros_concernes:
+            liste_numeros_concernes = ['3rd']
+
+        elif '1 to 18' in liste_numeros_concernes:
+            liste_numeros_concernes = ['1 to 18']
+        elif '19 to 36' in liste_numeros_concernes:
+            liste_numeros_concernes = ['19 to 36']
+        elif 'PAIR' in liste_numeros_concernes:
+            liste_numeros_concernes = ['PAIR']
+        elif 'IMPAIR' in liste_numeros_concernes:
+            liste_numeros_concernes = ['IMPAIR']
+        elif 'ROUGE' in liste_numeros_concernes:
+            liste_numeros_concernes = ['ROUGE']
+        elif 'NOIR' in liste_numeros_concernes:
+            liste_numeros_concernes = ['NOIR']
+
+        return liste_numeros_concernes
+
     def trouver_position_jeton(self, liste_numeros_concernes):
         """ Renvoie la position que le jeton doit avoir selon la liste des cases surlignées"""
         min_x, min_y, max_x, max_y = 20000, 20000, 0, 0
 
         if len(liste_numeros_concernes) != 0:
             item_trouve = None
+
             for numero_item in liste_numeros_concernes:
                 for item in self.items():
                     if "ItemCase" in str(type(item)):
@@ -431,7 +505,7 @@ class TableRouletteScene(QGraphicsScene):
                 elif "10" in liste_items:
                     liste_items = ['10', '11', '12']
                 elif "2nd 12" in liste_items:
-                    liste_items = ['1st 12', '2nd 12']
+                    liste_items = ['1st 12', '2nd 12', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24']
                 else:
                     liste_items = []
 
@@ -468,7 +542,7 @@ class TableRouletteScene(QGraphicsScene):
                 elif "22" in liste_items:
                     liste_items = ['22', '23', '24']
                 elif "3rd 12" in liste_items:
-                    liste_items = ['2nd 12', '3rd 12']
+                    liste_items = ['2nd 12', '3rd 12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36']
                 else:
                     liste_items = []
 
@@ -532,10 +606,46 @@ class TableRouletteScene(QGraphicsScene):
                 liste_items = []
             elif "36" in liste_items and "1st" in liste_items:
                 liste_items = []
+            elif "1st" in liste_items and '2nd' in liste_items:
+                liste_items = ['1st', '2nd', '3', '6', '9', '12', '15', '18', '21', '24', '27', '30', '33', '36', '2', '5', '8', '11', '14', '17', '20', '23', '26', '29', '32', '35']
+            elif "2nd" in liste_items and '3rd' in liste_items:
+                liste_items = ['2nd', '3rd', '2', '5', '8', '11', '14', '17', '20', '23', '26', '29', '32', '35', '1', '4', '7', '10', '13', '16', '19', '22', '25', '28', '31', '34']
 
         elif len(liste_items) == 4:
-            if "3rd" in liste_items or "2nd" in liste_items or "3rd" in liste_items:
+            if "1st" in liste_items or "2nd" in liste_items or "3rd" in liste_items:
                 liste_items = []
+
+        elif liste_items == ['1st 12']:
+            liste_items = ['1st 12', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+
+        elif liste_items == ['2nd 12']:
+            liste_items = ['2nd 12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24']
+
+        elif liste_items == ['3rd 12']:
+            liste_items = ['3rd 12', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36']
+
+        elif liste_items == ['1st']:
+            liste_items = ['1st', '3', '6', '9', '12', '15', '18', '21', '24', '27', '30', '33', '36']
+
+        elif liste_items == ['2nd']:
+            liste_items = ['2nd', '2', '5', '8', '11', '14', '17', '20', '23', '26', '29', '32', '35']
+
+        elif liste_items == ['3rd']:
+            liste_items = ['3rd', '1', '4', '7', '10', '13', '16', '19', '22', '25', '28', '31', '34']
+
+        elif '1 to 18' in liste_items:
+            liste_items = ['1 to 18', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18']
+        elif '19 to 36' in liste_items:
+            liste_items = ['19 to 36', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36']
+        elif 'PAIR' in liste_items:
+            liste_items = ['PAIR', '2', '4', '6', '8', '10', '12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32', '34', '36']
+        elif 'IMPAIR' in liste_items:
+            liste_items = ['IMPAIR', '1', '3', '5', '7', '9', '11', '13', '15', '17', '19', '21', '23', '25', '27', '29', '31', '33', '35']
+        elif 'ROUGE' in liste_items:
+            liste_items = ['ROUGE', '1', '3', '5', '7', '9', '12', '14', '16', '18', '19', '21', '23', '25', '27', '30', '32', '34', '36']
+        elif 'NOIR' in liste_items:
+            liste_items = ['NOIR', '2', '4', '6', '8', '10', '11', '13', '15', '17', '20', '22', '24', '26', '28', '29', '31', '33', '35']
+
         return liste_items
 
     def trouver_cases(self, x, y):
@@ -576,10 +686,30 @@ class TableRouletteScene(QGraphicsScene):
         self.mise_a_jour_label_banque_mise()
 
 
+class WidgetAnimationeGain(QWidget):
+    def __init__(self, table_roulette_view, valeur):
+        super().__init__(table_roulette_view)
+        layoutH = QHBoxLayout(self)
+        self.label = QLabel(valeur)
+        self.label.setFixedSize(100, 100)
+        layoutH.addWidget(self.label)
+        self.label.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)
+        self.setLayout(layoutH)
+
+    def mise_a_jour_text(self, gain):
+        if gain >= 0:
+            self.label.setText("+ " + str(gain))
+        else:
+            self.label.setText("- " + str(abs(gain)))
+        self.label.setStyleSheet(CSS.css_label_animation_gain(gain))
+
+
 class TableRouletteView(QGraphicsView):
-    def __init__(self,widget_central_table_roulette):
+    def __init__(self, widget_central_table_roulette):
         super().__init__(widget_central_table_roulette)
         self.widget_central_table_roulette = widget_central_table_roulette
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setRenderHint(QPainter.Antialiasing)
         self.installEventFilter(self)
         self.setStyleSheet(CSS.css_table_roulette_view)
@@ -587,15 +717,38 @@ class TableRouletteView(QGraphicsView):
         #self.setStyleSheet('background-color: yellow;')
         self.setContentsMargins(0, 0, 0, 0)
 
+        self.label_animation = WidgetAnimationeGain(self, "+13")
+        self.label_animation.move(200, 200)
+        self.label_animation.hide()
+        self.anim = None  # QPropertyAnimation des gains
+
+        self.animation_label_gain_en_cours = False
+
         self.scene = TableRouletteScene(self)
         self.setScene(self.scene)
 
-        self.dic_item_case_gain = {}   # stock les item cases_gain
-        self.dic_item_case = {}        # stock les item case
+        self.dic_item_case_gain = {}   # stock les items cases_gain
+        self.dic_item_case = {}        # stock les items case
 
         self.taille_case = TAILLE_CASE
         self.taille_jeton = TAILLE_JETON
         self.initier_cases()
+        self.item_roue = None
+        self.initier_roue()
+
+
+        self.widget_bouton_tourner = WidgetBoutonTourner(self)
+        self.widget_bouton_tourner.move(410, 430)
+
+        self.widget_bouton_rejouer_mise = WidgetBoutonRejouerMise(self)
+        self.widget_bouton_rejouer_mise.move(740, 430)
+
+
+        #self.animer_label_gain(13)
+
+    def initier_roue(self):
+        self.item_roue = ItemRoue(self)
+        self.scene.addItem(self.item_roue)
 
     def initier_cases(self):
         x = 0
@@ -667,10 +820,29 @@ class TableRouletteView(QGraphicsView):
         #print_dic(dic_valeur_gain)
         #print()
 
+    def stop_animation_label_gain(self):
+        self.anim.stop()
+        self.label_animation.hide()
+        self.animation_label_gain_en_cours = False
+
+    def animer_label_gain(self, gain_reel):
+        self.anim = QPropertyAnimation(self.label_animation, b'pos')
+        self.anim.setDuration(2700)
+        self.anim.setEasingCurve(QEasingCurve(QEasingCurve.OutQuart))
+        self.anim.setStartValue(QPoint(507, 0))
+        self.anim.setEndValue(QPoint(507, 110))
+        self.anim.finished.connect(self.stop_animation_label_gain)
+        self.label_animation.show()
+        self.animation_label_gain_en_cours = True
+        self.label_animation.mise_a_jour_text(gain_reel)
+        #self.anim.setTargetObject(self.label_animation)
+        self.anim.start()
+
     def animer_case_tirage(self, numero_tirage):
-        for numero_case, item_case in self.dic_item_case.items():
-            if str(numero_tirage) == str(numero_case):
-                item_case.run_animation_case()
+        if not self.scene.animation_clignottement_en_cours:
+            for numero_case, item_case in self.dic_item_case.items():
+                if str(numero_tirage) == str(numero_case):
+                    item_case.run_animation_case()
 
     def eventFilter(self, source, event):
         """ filtre les elements concernant la vue"""

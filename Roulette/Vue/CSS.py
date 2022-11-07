@@ -158,10 +158,12 @@ css_label_banque_mise = """
        QLabel{
             font-family: 'Roboto';
             font-weight:bold;
-        
+            border: 2px solid #FDE08D;
+            border-radius: 3px;
             text-align:center;
-            font-size: 22px;
+            font-size: 18px;
             margin-left: 0px;
+            padding-top: 0px;
             color: #FDE08D;
         }
     """
@@ -222,6 +224,227 @@ css_bouton_tourner = """
     
 """
 
+css_bouton_rejouer_mise = """
+    QPushButton{
+        background-image: url(""" + os.path.join(os.path.dirname(os.path.dirname(__file__)), "Ressources", "replay.png").replace(os.sep, '/') + """);
+        background-color: qlineargradient(
+                x1: 0, y1: 1, x2: 1, y2: 1,
+                stop: 0 #8f6B29, stop: 0.7 #FDE08D,
+                stop: 1.0 #DF9F28);
+        border-radius: 6px;
+        height: 40px;
+        border: 2px solid #28292d;
+        background-repeat: no-repeat; 
+        background-position: center;
+    }
+    
+    QPushButton:hover{
+        background-color: qlineargradient(
+                x1: 0, y1: 1, x2: 1, y2: 1,
+                stop: 0 #DF9F28, stop: 0.7 #FDE08D,
+                stop: 1.0 #8f6B29);
+        border-radius: 6px;
+        height: 40px;
+        border: 2px solid #28292d;
+    }
+
+    QPushButton:pressed{
+        background-image: url(""" + os.path.join(os.path.dirname(os.path.dirname(__file__)), "Ressources", "replay_petit.png").replace(os.sep, '/') + """);
+        background-repeat: no-repeat; 
+        background-position: center;
+    }
+    
+"""
+
+css_tab_bar = """
+    QTabWidget::pane { 
+        position: absolute;
+        top: 1em;
+        border: none;
+    }
+
+    QTabBar::tab {
+        font-family:"Arial";
+        font-weight:bold;
+        font-size: 16px;
+        text-align:center;
+        color: #3c3f41;
+        background:  #afb1b3;
+        padding: 4px;
+        min-width: 25ex;
+        min-height: 8ex;
+    }
+
+    QTabBar::tab:selected{
+        background: #777879;
+        color: #D6D6D6;
+    }
+    QTabBar::tab:hover{
+        background: qlineargradient(x1:5, y1:0, x2:0, y2:1, 
+                    stop:0 #4F5254, 
+                    stop:1 #afb1b3);}
+    }"""
+
+css_status_bar = """
+    QStatusBar::item {
+        border: none;
+    }
+
+    QStatusBar{
+        background: #4F5254;
+        font-family:"Arial";
+        font-weight:bold;
+        font-size: 13px;
+        text-align:center;
+        color: #afb1b3;
+    }
+"""
+
+css_plain_text = """
+    QPlainTextEdit{
+        font-family:"Roboto";
+        font-size: 15px;
+        color: #afb1b3;
+        border: 2px solid #afb1b3;
+        padding: 10px;
+        border-radius: 8px;
+        background: #4F5254;
+    }
+
+    QScrollBar:vertical {
+        border-radius: 8px;
+        background: solid #afb1b3;
+        width: 20px;
+        margin: 23px 0px 23px 0;
+        padding 2px;
+    }
+    QScrollBar::handle:vertical {
+        background: qlineargradient(
+                x1: 0, y1: 1, x2: 1, y2: 1,
+                stop: 0 #afb1b3, stop: 0.7#4F5254,
+                stop: 1.0 #4F5254);
+        border: 1px solid #afb1b3;
+        border-radius: 7px;
+        min-height: 30px;
+    }
+    QScrollBar::add-line:vertical {
+        background: qlineargradient(
+                x1: 0, y1: 1, x2: 1, y2: 1,
+                stop: 0 #afb1b3, stop: 0.7#4F5254,
+                stop: 1.0 #4F5254);
+        border-radius: 4px;
+        height: 16px;
+        subcontrol-position: right bottom;
+        subcontrol-origin: margin;
+        border: 1px solid #888A85; 
+    }
+    QScrollBar::sub-line:vertical {
+        background: qlineargradient(
+                x1: 0, y1: 1, x2: 1, y2: 1,
+                stop: 0 #afb1b3, stop: 0.7#4F5254,
+                stop: 1.0 #4F5254);
+        border-radius: 4px;
+        height: 16px;
+        subcontrol-position: right top;
+        subcontrol-origin: margin;
+        border: 1px solid #888A85;
+        position: absolute; 
+    }
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+        background: none;
+    }
+
+    QScrollBar:horizontal {
+        border-radius: 8px;
+        background: solid #afb1b3;
+        height: 20px;
+        margin: 0px 23px 0px 23px;
+    }
+    QScrollBar::handle:horizontal {
+        background: qlineargradient(
+            x1: 0, y1: 0, x2: 0, y2: 1,
+            stop: 0 #afb1b3, stop: 0.7 #4F5254,
+            stop: 1.0 #4F5254);
+        border: 1px solid #afb1b3;
+        border-radius: 7px;
+        min-width: 30px;
+    }
+    QScrollBar::add-line:horizontal {
+        background: qlineargradient(
+                x1: 0, y1: 0, x2: 0, y2: 1,
+                stop: 0 #afb1b3, stop: 0.7 #4F5254,
+                stop: 1.0 #4F5254);
+        border-radius: 4px;
+        width: 16px;
+        subcontrol-position: right;
+        subcontrol-origin: margin;
+        border: 1px solid #888A85;
+    }
+    QScrollBar::sub-line:horizontal {
+        background: qlineargradient(
+                x1: 0, y1: 0, x2: 0, y2: 1,
+                stop: 0 #afb1b3, stop: 0.7 #4F5254,
+                stop: 1.0 #4F5254);
+        border-radius: 4px;
+        width: 16px;
+        subcontrol-position: top left;
+        subcontrol-origin: margin;
+        border: 1px solid #888A85;
+        position: absolute;
+    }
+    QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+        background: none;
+    }
+"""
+
+css_demo_edit = """
+    QLineEdit{
+        color:  #4F5254;
+        font-family:"Roboto";
+        font-size: 14px;
+        font-weight:bold;
+        background: #afb1b3;
+        border: 2px solid gray;
+        border-radius: 6px;
+        padding: 0 8px;
+        selection-background-color: darkgray;
+    }
+"""
+
+css_progress_bar_0_50 = """
+    QProgressBar {
+        border: 2px solid #28292d; 
+        border-radius: 6px;
+        text-align: center;
+        font-family: 'Roboto';
+        font-weight:bold;
+        color: #afb1b3;
+        background-color: #363636;
+    }
+
+    QProgressBar::chunk {
+        background-color: #FDE08D;
+        border-radius: 5px;    
+    }
+"""
+
+css_progress_bar_50_100 = """
+    QProgressBar {
+        border: 2px solid #28292d; 
+        border-radius: 6px;
+        text-align: center;
+        font-family: 'Roboto';
+        font-weight:bold;
+        color: #363636;
+        background-color: #363636;
+    }
+
+    QProgressBar::chunk {
+        background-color: #FDE08D;
+        border-radius: 5px;    
+    }
+"""
+
 
 def css_style_case_historique_tirage(nombre, modele):
     style = ""
@@ -233,6 +456,7 @@ def css_style_case_historique_tirage(nombre, modele):
             font-family: 'Roboto';
             font-weight:bold;
             text-align:center;
+            border-radius: 3px;
             font-size: 10px;
             margin-left: 0px;
             color: #FDE08D;
@@ -246,6 +470,7 @@ def css_style_case_historique_tirage(nombre, modele):
             font-family: 'Roboto';
             font-weight:bold;
             text-align:center;
+            border-radius: 3px;
             font-size: 10px;
             margin-left: 0px;
             color: #FDE08D;
@@ -259,6 +484,7 @@ def css_style_case_historique_tirage(nombre, modele):
             font-family: 'Roboto';
             font-weight:bold;
             text-align:center;
+            border-radius: 3px;
             font-size: 10px;
             margin-left: 0px;
             color: #FDE08D;
@@ -266,7 +492,6 @@ def css_style_case_historique_tirage(nombre, modele):
         }
         """
     return style
-
 
 
 def css_style_jeton(couleur, taille):
@@ -279,7 +504,7 @@ def css_style_jeton(couleur, taille):
         css_jeton = """
             QPushButton{
                 border-image: url(""" + jeton_url + """);
-                font-family:"Terminus";
+                font-family:"Roboto";
                 font-weight:bold;
                 font-size: 15px;
             }
@@ -289,7 +514,7 @@ def css_style_jeton(couleur, taille):
         css_jeton = """
             QPushButton{
                border-image: url(""" + jeton_url + """);
-               font-family:"Terminus";
+               font-family:"Roboto";
                margin: 5px;
                font-weight:bold;
                font-size: 10px;
@@ -297,3 +522,20 @@ def css_style_jeton(couleur, taille):
         """
 
     return css_jeton
+
+
+def css_label_animation_gain(nombre):
+    css_label_animation_gain = """ 
+           QLabel{
+                font-family:'Roboto';
+                font-weight:bold;
+                color:#FDE08D;
+                border-radius: 50%;
+                border: 3px solid #FDE08D;
+                text-align: center;
+                font-size: 25px;
+                margin-left: 0px;
+            }
+        """
+
+    return css_label_animation_gain
